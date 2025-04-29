@@ -63,7 +63,7 @@ zookeeper-server-start /opt/homebrew/etc/kafka/zookeeper.properties
 kafka-server-start /opt/homebrew/etc/kafka/server.properties
 ```
 
-#### Если Kafka скачан вручную (Linux, Windows):
+#### Если Kafka скачан вручную (Linux, Windows, если не робит - забить):
 
 ```bash
 bin/zookeeper-server-start.sh config/zookeeper.properties
