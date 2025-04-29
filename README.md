@@ -11,7 +11,7 @@
 ### 📦 Требования
 
 - Python 3.8+
-- Установленный [Apache Kafka](https://kafka.apache.org/quickstart) (включая Zookeeper)
+- Установленный [Apache Kafka](https://kafka.apache.org/quickstart) (включая Zookeeper, хотя вроде без него робит)
 - Git
 
 ---
