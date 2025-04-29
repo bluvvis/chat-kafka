@@ -127,9 +127,9 @@ chat-kafka/
 
 ---
 
-## 📤 Автор
+## 📤 Авторы
 
-Grigorij Belaev, Farit Sharafutdinov, Batraz Dzesov, Stanislav Delyukov  
+Grigorii Belaev, Farit Sharafutdinov, Batraz Dzesov, Stanislav Delyukov  
 GitHub: [@bluvvis](https://github.com/bluvvis)
 ```
 
