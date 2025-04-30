@@ -3,18 +3,20 @@ from pydantic import BaseModel
 from aiokafka import AIOKafkaProducer
 import asyncio
 import json
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
-KAFKA_BROKER = "localhost:9092"
-KAFKA_TOPIC = "chat"  # Унифицируем тему
+# Монтируем папку web для раздачи фронтенда
+app.mount("/web", StaticFiles(directory="web", html=True), name="web")
 
-# Модель для входящих сообщений
+KAFKA_BROKER = "localhost:9092"
+KAFKA_TOPIC = "chat"
+
 class Message(BaseModel):
     username: str
     message: str
 
-# Отправка сообщения в Kafka
 async def send_to_kafka(message: dict):
     producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BROKER)
     await producer.start()
@@ -24,11 +26,8 @@ async def send_to_kafka(message: dict):
     finally:
         await producer.stop()
 
-# Эндпоинт для отправки сообщений
 @app.post("/send")
 async def send_message(msg: Message):
     message_data = {"user": msg.username, "message": msg.message}
     await send_to_kafka(message_data)
     return {"status": "Message sent"}
-
-# Удаляем потребителя Kafka из server.py, так как он есть в consumer.py
