@@ -1,40 +1,34 @@
-import asyncio
 from fastapi import FastAPI
-from aiokafka import AIOKafkaConsumer
-from typing import List
+from pydantic import BaseModel
+from aiokafka import AIOKafkaProducer
+import asyncio
+import json
 
-# Инициализация FastAPI приложения
 app = FastAPI()
 
-# Конфигурация Kafka Consumer
-KAFKA_BROKER = "localhost:9092"  # Адрес вашего брокера Kafka
-KAFKA_TOPIC = "chat_topic"  # Тема, которая используется для обмена сообщениями
+KAFKA_BROKER = "localhost:9092"
+KAFKA_TOPIC = "chat"  # Унифицируем тему
 
-# Асинхронная функция для обработки сообщений из Kafka
-async def consume_messages():
-    consumer = AIOKafkaConsumer(
-        KAFKA_TOPIC,
-        bootstrap_servers=KAFKA_BROKER,
-        group_id="chat-consumer-group"
-    )
-    await consumer.start()
+# Модель для входящих сообщений
+class Message(BaseModel):
+    username: str
+    message: str
+
+# Отправка сообщения в Kafka
+async def send_to_kafka(message: dict):
+    producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BROKER)
+    await producer.start()
     try:
-        async for msg in consumer:
-            print(f"Получено сообщение: {msg.value.decode()}")
-            # Здесь вы можете добавить обработку сообщения (например, сохранять в БД или отправлять на фронт)
+        await producer.send_and_wait(KAFKA_TOPIC, json.dumps(message).encode('utf-8'))
+        print(f"Отправлено в Kafka: {message}")
     finally:
-        await consumer.stop()
+        await producer.stop()
 
-# Запуск потребителя Kafka в фоне
-@app.on_event("startup")
-async def startup_event():
-    # Запускаем потребление сообщений Kafka в фоне
-    loop = asyncio.get_event_loop()
-    loop.create_task(consume_messages())
+# Эндпоинт для отправки сообщений
+@app.post("/send")
+async def send_message(msg: Message):
+    message_data = {"user": msg.username, "message": msg.message}
+    await send_to_kafka(message_data)
+    return {"status": "Message sent"}
 
-# Пример маршрута для получения сообщений
-@app.get("/messages", response_model=List[str])
-async def get_messages():
-    # Это просто заглушка, вы можете сюда добавить логику для отображения сообщений
-    return ["Пример сообщения 1", "Пример сообщения 2"]
-
+# Удаляем потребителя Kafka из server.py, так как он есть в consumer.py
