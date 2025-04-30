@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -39,36 +40,35 @@
             </section>
         </div>
     </div>
+
     <script>
         let username = '';
 
-        const nicknameInput = document.getElementById('name');
-        const chat = document.getElementById('chat');
-        const nicknameButton = document.getElementById('namesend');
+        const nicknameInput   = document.getElementById('name');
+        const chat            = document.getElementById('chat');
+        const nicknameButton  = document.getElementById('namesend');
         const nicknameContainer = document.querySelector('.nickname-container');
-        const inputField = document.getElementById('val');
-        const sendButton = document.getElementById('msend');
-        const chatContainer = document.querySelector('.messages-chat');
+        const inputField      = document.getElementById('val');
+        const sendButton      = document.getElementById('msend');
+        const chatContainer   = document.getElementById('messages-chat');
 
-        // WebSocket для получения сообщений
-        const ws = new WebSocket("ws://localhost:8001");
-
-        ws.onopen = () => console.log("Подключено к WebSocket");
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
+        // Функция рендера одного сообщения
+        function processMessage(data) {
             const messageElement = document.createElement('div');
             messageElement.classList.add('message');
 
-            // Если сообщение от текущего пользователя, добавляем класс response
             if (data.user === username) {
                 const responseElement = document.createElement('div');
                 responseElement.classList.add('response');
+
                 const authorElement = document.createElement('p');
                 authorElement.classList.add('author');
                 authorElement.textContent = data.user;
+
                 const textElement = document.createElement('p');
                 textElement.classList.add('text');
                 textElement.textContent = data.message;
+
                 responseElement.appendChild(authorElement);
                 responseElement.appendChild(textElement);
                 messageElement.appendChild(responseElement);
@@ -76,28 +76,42 @@
                 const authorElement = document.createElement('p');
                 authorElement.classList.add('author');
                 authorElement.textContent = data.user;
+
                 const textElement = document.createElement('p');
                 textElement.classList.add('text');
                 textElement.textContent = data.message;
+
                 messageElement.appendChild(authorElement);
                 messageElement.appendChild(textElement);
             }
 
             chatContainer.appendChild(messageElement);
             chatContainer.scrollTop = chatContainer.scrollHeight;
-        };
-        ws.onerror = (error) => console.error("WebSocket ошибка:", error);
-        ws.onclose = () => console.log("WebSocket закрыт");
+        }
 
+        // WebSocket для получения новых сообщений
+        const ws = new WebSocket("ws://localhost:8001");
+        ws.onopen    = () => console.log("Подключено к WebSocket");
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                processMessage(data);
+            } catch (err) {
+                console.error("Ошибка парсинга WS-сообщения:", err);
+            }
+        };
+        ws.onerror   = (error) => console.error("WebSocket ошибка:", error);
+        ws.onclose   = () => console.log("WebSocket закрыт");
+
+        // Отправка сообщения на сервер через HTTP
         async function send() {
-            const message = inputField.value;
-            if (message !== '' && username !== '') {
+            const message = inputField.value.trim();
+            if (message && username) {
                 try {
-                    // Отправляем сообщение на сервер через POST
                     await fetch("http://127.0.0.1:8000/send", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ username, message }),
+                        body: JSON.stringify({ user: username, message })
                     });
                     inputField.value = '';
                 } catch (error) {
@@ -106,37 +120,32 @@
             }
         }
 
-        sendButton.addEventListener('click', function() {
-            send();
-        });
+        sendButton.addEventListener('click', send);
+        inputField.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
 
-        inputField.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter') {
-                send();
-            }
-        });
-
-        nicknameButton.addEventListener('click', function() {
-            if (nicknameInput.value !== '') {
-                username = nicknameInput.value;
+        // Ввод ника
+        nicknameButton.addEventListener('click', () => {
+            if (nicknameInput.value.trim() !== '') {
+                username = nicknameInput.value.trim();
                 nicknameContainer.classList.add('disable');
                 chat.classList.remove('disable');
-                setTimeout(function() {
-                    scrollDown();
-                }, 500);
             }
         });
 
-        window.addEventListener('load', function() {
-            scrollDown();
+        // Загрузка истории сообщений при старте
+        window.addEventListener('load', async () => {
+            try {
+                const res = await fetch("http://127.0.0.1:8000/messages");
+                const { messages } = await res.json();
+                messages.forEach(processMessage);
+            } catch (err) {
+                console.error("Ошибка загрузки истории сообщений:", err);
+            }
         });
-
+        
+        // Скролл вниз
         function scrollDown() {
-            const messagesChat = document.querySelector('.messages-chat');
-            messagesChat.scrollTo({
-                top: messagesChat.scrollHeight,
-                behavior: 'smooth',
-            });
+            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
         }
     </script>
 </body>
