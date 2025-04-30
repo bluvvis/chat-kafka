@@ -12,30 +12,33 @@
   <ul id="chat"></ul>
 
   <script>
+    // Подключение к WebSocket
+    const ws = new WebSocket("ws://localhost:8001");
+    
+    ws.onopen = () => console.log("Подключено к WebSocket");
+    ws.onmessage = (event) => {
+      const list = document.getElementById("chat");
+      const item = document.createElement("li");
+      item.textContent = event.data;
+      list.appendChild(item);
+    };
+    ws.onerror = (error) => console.error("WebSocket ошибка:", error);
+    ws.onclose = () => console.log("WebSocket закрыт");
+
     async function sendMessage() {
       const username = document.getElementById("username").value;
       const message = document.getElementById("message").value;
-      await fetch("http://127.0.0.1:8000/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, message }),
-      });
+      if (username && message) {
+        await fetch("http://127.0.0.1:8000/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, message }),
+        });
+        document.getElementById("message").value = ""; // Очищаем поле
+      } else {
+        alert("Введите имя и сообщение!");
+      }
     }
-
-    async function loadMessages() {
-      const res = await fetch("http://127.0.0.1:8000/messages");
-      const data = await res.json();
-      const list = document.getElementById("chat");
-      list.innerHTML = "";
-      data.forEach(msg => {
-        const item = document.createElement("li");
-        item.textContent = `${msg.username}: ${msg.message}`;
-        list.appendChild(item);
-      });
-    }
-
-    setInterval(loadMessages, 2000); // обновлять каждые 2 секунды
   </script>
 </body>
 </html>
-
