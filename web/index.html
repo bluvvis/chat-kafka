@@ -1,1 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kafka Chat</title>
+</head>
+<body>
+  <h1>Kafka Chat</h1>
+  <input type="text" id="username" placeholder="Username" />
+  <input type="text" id="message" placeholder="Your message" />
+  <button onclick="sendMessage()">Send</button>
+  <ul id="chat"></ul>
+
+  <script>
+    async function sendMessage() {
+      const username = document.getElementById("username").value;
+      const message = document.getElementById("message").value;
+      await fetch("http://127.0.0.1:8000/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, message }),
+      });
+    }
+
+    async function loadMessages() {
+      const res = await fetch("http://127.0.0.1:8000/messages");
+      const data = await res.json();
+      const list = document.getElementById("chat");
+      list.innerHTML = "";
+      data.forEach(msg => {
+        const item = document.createElement("li");
+        item.textContent = `${msg.username}: ${msg.message}`;
+        list.appendChild(item);
+      });
+    }
+
+    setInterval(loadMessages, 2000); // обновлять каждые 2 секунды
+  </script>
+</body>
+</html>
 
