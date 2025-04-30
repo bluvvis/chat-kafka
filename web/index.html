@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <title>Kafka Chat</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    #chat { list-style: none; padding: 0; border: 1px solid #ccc; min-height: 200px; padding: 10px; }
+    #chat li { margin: 5px 0; }
+    input, button { margin: 5px; padding: 5px; }
+  </style>
 </head>
 <body>
   <h1>Kafka Chat</h1>
@@ -12,14 +18,14 @@
   <ul id="chat"></ul>
 
   <script>
-    // Подключение к WebSocket
     const ws = new WebSocket("ws://localhost:8001");
     
     ws.onopen = () => console.log("Подключено к WebSocket");
     ws.onmessage = (event) => {
+      const data = JSON.parse(event.data); // Парсим JSON
       const list = document.getElementById("chat");
       const item = document.createElement("li");
-      item.textContent = event.data;
+      item.textContent = `[${data.user}]: ${data.message}`;
       list.appendChild(item);
     };
     ws.onerror = (error) => console.error("WebSocket ошибка:", error);
@@ -34,7 +40,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, message }),
         });
-        document.getElementById("message").value = ""; // Очищаем поле
+        document.getElementById("message").value = "";
       } else {
         alert("Введите имя и сообщение!");
       }
