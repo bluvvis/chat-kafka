@@ -108,6 +108,9 @@
             const message = inputField.value.trim();
             if (message && username) {
                 try {
+                    // Локально добавляем сообщение
+                    processMessage({ user: username, message: message });
+                    // Отправляем на сервер
                     await fetch("http://127.0.0.1:8000/send", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
