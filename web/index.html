@@ -2,12 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kafka Chat</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-    #chat { list-style: none; padding: 0; border: 1px solid #ccc; min-height: 200px; padding: 10px; }
-    #chat li { margin: 5px 0; }
-    input, button { margin: 5px; padding: 5px; }
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+    #chat {
+      border: 1px solid #ccc;
+      padding: 10px;
+      min-height: 300px;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+    }
+    input[type="text"] {
+      width: calc(100% - 70px);
+      padding: 5px;
+      margin-right: 10px;
+    }
+    button {
+      padding: 5px 10px;
+    }
   </style>
 </head>
 <body>
@@ -22,7 +41,7 @@
     
     ws.onopen = () => console.log("Подключено к WebSocket");
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data); // Парсим JSON
+      const data = JSON.parse(event.data);
       const list = document.getElementById("chat");
       const item = document.createElement("li");
       item.textContent = `[${data.user}]: ${data.message}`;
