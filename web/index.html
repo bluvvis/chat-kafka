@@ -107,10 +107,9 @@
         async function send() {
             const message = inputField.value.trim();
             if (message && username) {
+                // Локально добавляем сообщение
+                processMessage({ user: username, message: message });
                 try {
-                    // Локально добавляем сообщение
-                    processMessage({ user: username, message: message });
-                    // Отправляем на сервер
                     await fetch("http://127.0.0.1:8000/send", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -130,13 +129,20 @@
         nicknameButton.addEventListener('click', () => {
             if (nicknameInput.value.trim() !== '') {
                 username = nicknameInput.value.trim();
+                localStorage.setItem('username', username); // Сохраняем
                 nicknameContainer.classList.add('disable');
                 chat.classList.remove('disable');
             }
         });
 
-        // Загрузка истории сообщений при старте
+        // Загрузка истории сообщений при старте и проверка сохранённого ника
         window.addEventListener('load', async () => {
+            const savedUsername = localStorage.getItem('username');
+            if (savedUsername) {
+                username = savedUsername;
+                nicknameContainer.classList.add('disable');
+                chat.classList.remove('disable');
+            }
             try {
                 const res = await fetch("http://127.0.0.1:8000/messages");
                 const { messages } = await res.json();
@@ -145,7 +151,7 @@
                 console.error("Ошибка загрузки истории сообщений:", err);
             }
         });
-        
+
         // Скролл вниз
         function scrollDown() {
             chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
