@@ -2,51 +2,47 @@ import asyncio
 import json
 from kafka import KafkaConsumer
 import websockets
-from websockets.exceptions import ConnectionClosed
 
-consumer = KafkaConsumer(
-    'chat',
-    bootstrap_servers=['localhost:9092'],
-    group_id='chat-group',
-    value_deserializer=lambda m: json.loads(m.decode('utf-8'))
-)
+KAFKA_TOPIC = "chat"
+KAFKA_BROKER = "localhost:9092"
+WEBSOCKET_HOST = "localhost"
+WEBSOCKET_PORT = 8001
 
-active_connections = set()
+connected_clients = set()
 
-async def websocket_handler(websocket, path):
-    active_connections.add(websocket)
-    print(f"Новое WebSocket-подключение: {websocket.remote_address}")
+async def handle_kafka_messages():
+    consumer = KafkaConsumer(
+        KAFKA_TOPIC,
+        bootstrap_servers=KAFKA_BROKER,
+        auto_offset_reset='latest',  # используйте 'earliest', если хотите всю историю
+        enable_auto_commit=True,
+        value_deserializer=lambda m: m.decode('utf-8')
+    )
+
+    print(f"Подключён к Kafka, слушаем топик: {KAFKA_TOPIC}")
+
+    for message in consumer:
+        print(f"Получено из Kafka: {message.value}")
+        await broadcast(message.value)
+
+async def broadcast(message):
+    if connected_clients:
+        await asyncio.gather(*(client.send(message) for client in connected_clients))
+
+async def websocket_handler(websocket):
+    connected_clients.add(websocket)
+    print(f"Клиент подключён: {websocket.remote_address}")
     try:
-        async for message in websocket:
-            print(f"Получено от клиента: {message}")
-    except ConnectionClosed:
-        print(f"Подключение закрыто: {websocket.remote_address}")
+        await websocket.wait_closed()
     finally:
-        active_connections.remove(websocket)
-
-async def start_websocket_server():
-    server = await websockets.serve(websocket_handler, "localhost", 8001)
-    print("WebSocket сервер запущен на ws://localhost:8001")
-    await server.wait_closed()
-
-async def consume_messages():
-    while True:
-        for message in consumer.poll(timeout_ms=1000).values():
-            for msg in message:
-                data = msg.value
-                if 'user' in data and 'message' in data:
-                    print(f"Получено из Kafka: [{data['user']}]: {data['message']}")
-                    for ws in list(active_connections):
-                        try:
-                            await ws.send(json.dumps({"user": data['user'], "message": data['message']}))
-                        except ConnectionClosed:
-                            active_connections.remove(ws)
-                else:
-                    print("⚠️ Неверный формат сообщения:", data)
-        await asyncio.sleep(0.1)
+        connected_clients.remove(websocket)
+        print(f"Клиент отключён: {websocket.remote_address}")
 
 async def main():
-    await asyncio.gather(start_websocket_server(), consume_messages(), return_exceptions=True)
+    print(f"WebSocket сервер запускается на ws://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")
+    websocket_server = await websockets.serve(websocket_handler, WEBSOCKET_HOST, WEBSOCKET_PORT)
+
+    await handle_kafka_messages()  # Запускается после ws-сервера, блокирующая
 
 if __name__ == "__main__":
     asyncio.run(main())
