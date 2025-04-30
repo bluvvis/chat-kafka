@@ -1,41 +1,40 @@
 # 💬 Chat Application with Kafka
 
-Распределённое чат-приложение, использующее Apache Kafka для обработки сообщений.  
-Реализована **Feature A**: все пользователи обмениваются сообщениями в **одном общем топике**, видя сообщения друг друга в реальном времени.
+A distributed chat application using Apache Kafka for message processing.
+Implemented **Feature A**: all users exchange messages in **one shared topic**, seeing each other's messages in real time.
+---
+
+## 📌 Feature A: Single Kafka topic
+
+Within Feature A:
+- All users connect to a **single Kafka topic `chat`**
+- All sent messages are visible to all users
+- No separation by chat rooms (unlike Feature B)
+- No message filtering (unlike Feature C)
 
 ---
 
-## 📌 Feature A: Общий Kafka-топик
+## 🚀 Launching a Project (Universal Instructions)
 
-В рамках фичи A:
-- Все пользователи подключаются к **единому Kafka-топику `chat`**
-- Все отправленные сообщения видны всем пользователям
-- Нет разделения по чат-комнатам (в отличие от Feature B)
-- Нет фильтрации сообщений (в отличие от Feature C)
-
----
-
-## 🚀 Запуск проекта (универсальная инструкция)
-
-### 🧩 Требования
+### 🧩 Requirements
 
 - Python 3.8+
-- Apache Kafka (установлен и настроен)
-- Установленный `zsh` (macOS по умолчанию), `bash` или `cmd` (для Windows)
+- Apache Kafka (installed and configured)
+- `zsh` (macOS default), `bash` or `cmd` (for Windows) installed
 - Git
 
 ---
 
-### 🔧 Установка
+### 🔧 Installation
 
-1. **Клонировать репозиторий**
+1. **Clone repository**
 
    ```bash
    git clone https://github.com/bluvvis/chat-kafka.git
    cd chat-kafka
    ```
 
-2. **Создать и активировать виртуальное окружение**
+2. **Create and activate a virtual environment**
 
    **macOS / Linux:**
    ```bash
@@ -49,7 +48,7 @@
    venv\Scripts\activate
    ```
 
-3. **Установить зависимости**
+3. **Install dependencies**
 
    ```bash
    pip install -r requirements.txt
@@ -57,31 +56,31 @@
 
 ---
 
-### ⚙️ Запуск Kafka
+### ⚙️ Launching Kafka
 
-#### macOS (установлено через Homebrew):
+#### macOS (installed via Homebrew):
 
-Открой отдельное окно терминала и выполни:
+Open a separate terminal window and run:
 
 ```bash
 zookeeper-server-start /opt/homebrew/etc/kafka/zookeeper.properties
 ```
 
-Затем в новом окне терминала:
+Then in a new terminal window:
 
 ```bash
 kafka-server-start /opt/homebrew/etc/kafka/server.properties
 ```
 
-#### Linux / Windows (Kafka скачан вручную):
+#### Linux (Kafka downloaded manually):
 
-В каталоге Kafka:
+In the Kafka directory:
 
 ```bash
 bin/zookeeper-server-start.sh config/zookeeper.properties
 ```
 
-Новое окно:
+New window:
 
 ```bash
 bin/kafka-server-start.sh config/server.properties
@@ -89,9 +88,9 @@ bin/kafka-server-start.sh config/server.properties
 
 ---
 
-### 🧪 Создание Kafka-топика
+### 🧪 Creating a Kafka topic
 
-Открой новый терминал и выполни:
+Open a new terminal and run:
 
 ```bash
 kafka-topics --create \
@@ -101,7 +100,7 @@ kafka-topics --create \
   --replication-factor 1
 ```
 
-Проверь наличие топика:
+Check the topic availability:
 
 ```bash
 kafka-topics --list --bootstrap-server localhost:9092
@@ -109,57 +108,87 @@ kafka-topics --list --bootstrap-server localhost:9092
 
 ---
 
-### 💬 Запуск чата
+#### Windows (Kafka downloaded manually):
 
-1. **Окно 1 — Consumer (получатель):**
+In the Kafka directory:
+
+```bash
+.\bin\windows\zookeeper-server-start.bat .\config\zookeeper.properties
+```
+
+New window:
+
+```bash
+.\bin\windows\kafka-server-start.bat .\config\server.properties
+```
+
+---
+
+### 🧪 Creating a Kafka topic
+
+Open a new terminal and run:
+
+```bash
+kafka-topics.bat --create --bootstrap-server localhost:9092 --topic chat --partitions 1 --replication-factor 1
+```
+
+Check the topic availability:
+
+```bash
+kafka-topics.bat --list --bootstrap-server localhost:9092
+```
+
+---
+
+### 💬 Starting a chat
+
+1. **Window 1 - Consumer:**
 
    ```bash
    python3 consumer.py
    ```
 
-   Должно появиться:
+   You should see:
    ```
    Kafka Chat Consumer started. Listening for messages...
    ```
 
-2. **Окно 2 — Producer (отправитель):**
+2. **Window 2 - Producer (sender):**
 
    ```bash
    python3 producer.py
    ```
 
-   Введи имя пользователя, например `bluvvis`, и отправляй сообщения.  
-   Они появятся у всех запущенных consumer'ов.
+   Enter a username, such as `bluvvis`, and send messages.
+They will appear in all running consumers.
 
-3. **Множественные окна:**
-   Можешь запустить несколько `producer.py` в отдельных терминалах, чтобы эмулировать нескольких пользователей.
-
+3. **Multiple windows:**
+    You can run multiple `producer.py` in separate terminals to emulate multiple users.
 ---
 
 ## ✅ Validation
 
-- ✅ **Общий топик:** Все пользователи подключены к одному топику `chat`
-- ✅ **Реальное время:** Сообщения моментально доставляются и отображаются
-- ✅ **Проверка:** Тестирование проводилось вручную через несколько терминалов (producer и consumer)
-- ❌ **Изоляция и фильтрация:** Не применимы — по ТЗ выбрана **Feature A**
-- ✅ **Порядок сообщений:** Сохраняется порядок отправки
-
+- ✅ **General topic:** All users are connected to one topic `chat`
+- ✅ **Real time:** Messages are instantly delivered and displayed
+- ✅ **Verification:** Testing was carried out manually through several terminals (producer and consumer)
+- ❌ **Isolation and filtering:** Not applicable - **Feature A** was selected according to the technical specifications
+- ✅ **Message order:** The sending order is preserved
 ---
 
-## 📁 Структура проекта
+## 📁 Project structure
 
 ```bash
 chat-kafka/
-├── consumer.py         # Получатель сообщений
-├── producer.py         # Отправитель сообщений
-├── requirements.txt    # Зависимости Python
-├── README.md           # Описание проекта
-└── venv/               # Виртуальное окружение (добавить в .gitignore)
+├── consumer.py         # Message recipient
+├── producer.py         # Message Sender
+├── requirements.txt    # Python Dependencies
+├── README.md           # Project Description
+└── venv/               # Virtual environment (add to .gitignore)
 ```
 
 ---
 
-## 🧑‍💻 Авторы
+## 🧑‍💻 Authors
 
 Grigorij Belaev, Farit Sharafutdinov, Batraz Dzesov, Stanislav Delyukov  
 GitHub: [@bluvvis](https://github.com/bluvvis)
