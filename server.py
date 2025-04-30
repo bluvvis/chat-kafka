@@ -3,13 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from aiokafka import AIOKafkaProducer
-from kafka import KafkaConsumer
-import asyncio
+from fastapi.responses import RedirectResponse
 import json
 
-
 app = FastAPI()
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,9 +15,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-app.mount("/", StaticFiles(directory="web", html=True), name="web")
 
 # --- Константы Kafka ---
 KAFKA_BROKER = "localhost:9092"
@@ -70,19 +64,12 @@ async def send_message(msg: Message):
 # --- Эндпойнт получения истории сообщений ---
 @app.get("/messages")
 async def get_messages():
-
-    #
-    # consumer = KafkaConsumer(
-    #     KAFKA_TOPIC,
-    #     bootstrap_servers=KAFKA_BROKER,
-    #     auto_offset_reset='earliest',
-    #     enable_auto_commit=False,
-    #     consumer_timeout_ms=500,
-    #     value_deserializer=lambda m: json.loads(m.decode('utf-8'))
-    # )
-    # history = [msg.value for msg in consumer]
-    # consumer.close()
-    # return {"messages": history}
-    #
     return {"messages": message_history}
 
+# --- Перенаправление с корневого URL на /web/index.html ---
+@app.get("/")
+async def redirect_to_index():
+    return RedirectResponse(url="/web/index.html")
+
+# --- Подключение директории web для статических файлов ---
+app.mount("/web", StaticFiles(directory="web", html=True), name="web")
