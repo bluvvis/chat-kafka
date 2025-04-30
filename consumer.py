@@ -33,12 +33,7 @@ async def start_websocket_server():
         print(f"Ошибка запуска WebSocket-сервера: {e}")
 
 async def consume_messages():
-    # Запускаем WebSocket-сервер
-    websocket_task = asyncio.create_task(start_websocket_server())
-
-    # Асинхронно читаем сообщения из Kafka
     while True:
-        # Получаем сообщения из Kafka с таймаутом
         for message in consumer.poll(timeout_ms=1000).values():
             for msg in message:
                 data = msg.value
@@ -51,12 +46,10 @@ async def consume_messages():
                             active_connections.remove(ws)
                 else:
                     print("⚠️ Неверный формат сообщения:", data)
-        # Даём шанс другим задачам
         await asyncio.sleep(0.1)
 
 async def main():
-    # Запускаем обе задачи
-    await asyncio.gather(consume_messages(), return_exceptions=True)
+    await asyncio.gather(start_websocket_server(), consume_messages(), return_exceptions=True)
 
 if __name__ == "__main__":
     asyncio.run(main())
