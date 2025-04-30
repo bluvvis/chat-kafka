@@ -27,6 +27,7 @@ async def handle_kafka_messages():
 
 async def broadcast(message):
     if connected_clients:
+        print(f"Отправляем сообщение {len(connected_clients)} клиентам")
         await asyncio.gather(*(client.send(message) for client in connected_clients))
 
 async def websocket_handler(websocket):
