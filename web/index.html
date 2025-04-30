@@ -3,57 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DNP Chat</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Chat</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="nickname-container">
-        <input class="input panel-item input-name" placeholder="Type your nickname..." id="name">
-        <button class="button panel-item btn-icon send-message-button" id="namesend">
-            Send
-        </button>
+        <input type="text" class="nickname-input" placeholder="Enter your nickname">
+        <button class="nickname-button">Join Chat</button>
     </div>
-    <div class="container disable" id="chat">
-        <div class="row">
-            <section class="chat">
-                <div class="header-chat">
-                    <p class="name">Chat</p>
-                    <i class="icon clickable fa fa-ellipsis-h right" aria-hidden="true"></i>
-                </div>
-                <div class="messages-chat" id="messages-chat">
-                    <!-- Сообщения будут добавляться сюда -->
-                </div>
-                <div class="footer-chat">
-                    <div class="conversation-panel">
-                        <div class="panel">
-                            <input class="input panel-item" placeholder="Type a message..." id="val">
-                            <button class="button panel-item btn-icon send-message-button" id="msend">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9l1.3-1.3z"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="conversation-container" id="ap"></div>
-                        <div class="status"></div>
-                    </div>
-                </div>
-            </section>
+    <div class="chat disable">
+        <div class="chat-container"></div>
+        <div class="input-container">
+            <input type="text" class="input-field" placeholder="Type a message...">
+            <button class="send-button">Send</button>
         </div>
     </div>
-
     <script>
-        let username = '';
-
-        const nicknameInput   = document.getElementById('name');
-        const chat            = document.getElementById('chat');
-        const nicknameButton  = document.getElementById('namesend');
         const nicknameContainer = document.querySelector('.nickname-container');
-        const inputField      = document.getElementById('val');
-        const sendButton      = document.getElementById('msend');
-        const chatContainer   = document.getElementById('messages-chat');
+        const nicknameInput = document.querySelector('.nickname-input');
+        const nicknameButton = document.querySelector('.nickname-button');
+        const chat = document.querySelector('.chat');
+        const chatContainer = document.querySelector('.chat-container');
+        const inputField = document.querySelector('.input-field');
+        const sendButton = document.querySelector('.send-button');
+        let username = '';
+        let ws = null;
+        let displayedMessageIds = new Set();
 
-        // Функция рендера одного сообщения
         function processMessage(data) {
+            if (data.id && displayedMessageIds.has(data.id)) {
+                return;
+            }
+            if (data.id) {
+                displayedMessageIds.add(data.id);
+            }
+
             const messageElement = document.createElement('div');
             messageElement.classList.add('message');
 
@@ -89,60 +73,53 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        // WebSocket для получения новых сообщений
-        const ws = new WebSocket("ws://localhost:8001");
-        ws.onopen    = () => console.log("Подключено к WebSocket");
-        ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                processMessage(data);
-            } catch (err) {
-                console.error("Ошибка парсинга WS-сообщения:", err);
+        nicknameButton.addEventListener('click', () => {
+            if (nicknameInput.value.trim() !== '') {
+                username = nicknameInput.value.trim();
+                nicknameContainer.classList.add('disable');
+                chat.classList.remove('disable');
+                connectWebSocket();
             }
-        };
-        ws.onerror   = (error) => console.error("WebSocket ошибка:", error);
-        ws.onclose   = () => console.log("WebSocket закрыт");
+        });
 
-        // Отправка сообщения на сервер через HTTP
         async function send() {
             const message = inputField.value.trim();
             if (message && username) {
-                // Локально добавляем сообщение
-                processMessage({ user: username, message: message });
+                const tempId = 'temp-' + Date.now();
+                const messageData = { id: tempId, user: username, message: message };
+                processMessage(messageData);
                 try {
-                    await fetch("http://127.0.0.1:8000/send", {
+                    const res = await fetch("http://127.0.0.1:8000/send", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ user: username, message })
                     });
-                    inputField.value = '';
+                    await res.json();
                 } catch (error) {
                     console.error("Ошибка отправки сообщения:", error);
                 }
+                inputField.value = '';
             }
         }
 
         sendButton.addEventListener('click', send);
-        inputField.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
-
-        // Ввод ника
-        nicknameButton.addEventListener('click', () => {
-            if (nicknameInput.value.trim() !== '') {
-                username = nicknameInput.value.trim();
-                localStorage.setItem('username', username); // Сохраняем
-                nicknameContainer.classList.add('disable');
-                chat.classList.remove('disable');
-            }
+        inputField.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') send();
         });
 
-        // Загрузка истории сообщений при старте и проверка сохранённого ника
+        function connectWebSocket() {
+            ws = new WebSocket("ws://127.0.0.1:8000/ws");
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                processMessage(data);
+            };
+            ws.onclose = () => {
+                console.log("WebSocket закрыт, пытаюсь переподключиться...");
+                setTimeout(connectWebSocket, 1000);
+            };
+        }
+
         window.addEventListener('load', async () => {
-            const savedUsername = localStorage.getItem('username');
-            if (savedUsername) {
-                username = savedUsername;
-                nicknameContainer.classList.add('disable');
-                chat.classList.remove('disable');
-            }
             try {
                 const res = await fetch("http://127.0.0.1:8000/messages");
                 const { messages } = await res.json();
@@ -151,11 +128,6 @@
                 console.error("Ошибка загрузки истории сообщений:", err);
             }
         });
-
-        // Скролл вниз
-        function scrollDown() {
-            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
-        }
     </script>
 </body>
 </html>
