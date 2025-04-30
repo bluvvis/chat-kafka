@@ -26,6 +26,10 @@ async def send_to_kafka(message: dict):
     finally:
         await producer.stop()
 
+@app.get("/messages")
+async def get_messages():
+    return {"messages": []}  # Временное решение
+
 @app.post("/send")
 async def send_message(msg: Message):
     message_data = {"user": msg.username, "message": msg.message}
