@@ -13,150 +13,124 @@
         </button>
     </div>
     <div class="container disable" id="chat">
-      <div class="row">
-        <section class="chat">
-          <div class="header-chat">
-            <p class="name">Chat</p>
-            <i class="icon clickable fa fa-ellipsis-h right" aria-hidden="true"></i>
-          </div>
-          <div class="messages-chat">
-            <div class="message">
-                <p class="author">Батраз</p>
-              <p class="text"> как фронт? </p>
-            </div>
-            <div class="message">
-                <p class="author">Батраз</p>
-              <p class="text"> 8 часов осталось </p>
-            </div>
-            <div class="message">
-              <div class="response">
-                <p class="author">Стас</p>
-                <p class="text"> see you on deadline </p>
-              </div>
-            </div>
-            <div class="message">
-              <div class="response">
-                <p class="author">Стас</p>
-                <p class="text"> делаю </p>
-              </div>
-            </div>
-            <div class="message">
-                <p class="author">Батраз</p>
-              <p class="text"> сомнительно... </p>
-            </div>
-            <div class="message">
-                <p class="author">Батраз</p>
-              <p class="text"> как фронт? как фронт? как фронт? как фронт? как фронт? как фронт? как фронт? как фронт? как фронт? </p>
-            </div>
-            <div class="message">
-                <p class="author">Батраз</p>
-              <p class="text"> как фронт? </p>
-            </div>
-            <div class="message">
-                <p class="author">Батраз</p>
-              <p class="text"> как фронт? </p>
-            </div>
-            <div class="message">
-                <p class="author">Батраз</p>
-              <p class="text"> как фронт? </p>
-            </div>
-            <div class="message">
-                <p class="author">Батраз</p>
-              <p class="text"> как фронт? </p>
-            </div>
-            <div class="message">
-                <p class="author">Батраз</p>
-              <p class="text"> как фронт? </p>
-            </div>
-            <div class="message">
-                <p class="author">Батраз</p>
-              <p class="text"> как фронт? </p>
-            </div>
-            <div class="message">
-                <p class="author">Батраз</p>
-              <p class="text"> как фронт? </p>
-            </div>
-          </div>
-          <div class="footer-chat">
-            <div class="conversation-panel">
-              <div class="panel">
-                <input class="input panel-item" placeholder="Type a message..." id="val">
-                <button class="button panel-item btn-icon send-message-button" id="msend">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9l1.3-1.3z"/>
-                  </svg>
-                </button>
-              </div>
-              <div class="conversation-container" id="ap"></div>
-              <div class="status"></div>
-            </div>
-          </div>
-        </section>
-      </div>
+        <div class="row">
+            <section class="chat">
+                <div class="header-chat">
+                    <p class="name">Chat</p>
+                    <i class="icon clickable fa fa-ellipsis-h right" aria-hidden="true"></i>
+                </div>
+                <div class="messages-chat" id="messages-chat">
+                    <!-- Сообщения будут добавляться сюда -->
+                </div>
+                <div class="footer-chat">
+                    <div class="conversation-panel">
+                        <div class="panel">
+                            <input class="input panel-item" placeholder="Type a message..." id="val">
+                            <button class="button panel-item btn-icon send-message-button" id="msend">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9l1.3-1.3z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="conversation-container" id="ap"></div>
+                        <div class="status"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
     </div>
     <script>
-        var username = 'Petr';
+        let username = '';
 
         const nicknameInput = document.getElementById('name');
         const chat = document.getElementById('chat');
         const nicknameButton = document.getElementById('namesend');
         const nicknameContainer = document.querySelector('.nickname-container');
-
         const inputField = document.getElementById('val');
         const sendButton = document.getElementById('msend');
         const chatContainer = document.querySelector('.messages-chat');
-        function send() {
-          const message = inputField.value;
-          if (message !== '') {
+
+        // WebSocket для получения сообщений
+        const ws = new WebSocket("ws://localhost:8001");
+
+        ws.onopen = () => console.log("Подключено к WebSocket");
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
             const messageElement = document.createElement('div');
             messageElement.classList.add('message');
 
-            const responseElement = document.createElement('div');
-            responseElement.classList.add('response');
+            // Если сообщение от текущего пользователя, добавляем класс response
+            if (data.user === username) {
+                const responseElement = document.createElement('div');
+                responseElement.classList.add('response');
+                const authorElement = document.createElement('p');
+                authorElement.classList.add('author');
+                authorElement.textContent = data.user;
+                const textElement = document.createElement('p');
+                textElement.classList.add('text');
+                textElement.textContent = data.message;
+                responseElement.appendChild(authorElement);
+                responseElement.appendChild(textElement);
+                messageElement.appendChild(responseElement);
+            } else {
+                const authorElement = document.createElement('p');
+                authorElement.classList.add('author');
+                authorElement.textContent = data.user;
+                const textElement = document.createElement('p');
+                textElement.classList.add('text');
+                textElement.textContent = data.message;
+                messageElement.appendChild(authorElement);
+                messageElement.appendChild(textElement);
+            }
 
-            const authorElement = document.createElement('p');
-            authorElement.classList.add('author');
-            authorElement.textContent = username;
-
-            const textElement = document.createElement('p');
-            textElement.classList.add('text');
-            textElement.textContent = message;
-            responseElement.appendChild(authorElement);
-            responseElement.appendChild(textElement);
-            messageElement.appendChild(responseElement);
             chatContainer.appendChild(messageElement);
-            inputField.value = '';
             chatContainer.scrollTop = chatContainer.scrollHeight;
-          }
+        };
+        ws.onerror = (error) => console.error("WebSocket ошибка:", error);
+        ws.onclose = () => console.log("WebSocket закрыт");
 
+        async function send() {
+            const message = inputField.value;
+            if (message !== '' && username !== '') {
+                try {
+                    // Отправляем сообщение на сервер через POST
+                    await fetch("http://127.0.0.1:8000/send", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ username, message }),
+                    });
+                    inputField.value = '';
+                } catch (error) {
+                    console.error("Ошибка отправки сообщения:", error);
+                }
+            }
         }
-        
+
         sendButton.addEventListener('click', function() {
             send();
         });
-        
-        inputField.addEventListener('keydown', function(event) {
-          if (event.key === 'Enter') {
-            send();
-          }
-        });
-        
-        nicknameButton.addEventListener('click', function() {
-          if (nicknameInput.value !== '') {
-            username = nicknameInput.value;
-            nicknameContainer.classList.add('disable');
-            chat.classList.remove('disable');
-            setTimeout(function() {
-                scrollDown();
-            }
-            , 500);
 
-          }
-          
+        inputField.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                send();
+            }
         });
+
+        nicknameButton.addEventListener('click', function() {
+            if (nicknameInput.value !== '') {
+                username = nicknameInput.value;
+                nicknameContainer.classList.add('disable');
+                chat.classList.remove('disable');
+                setTimeout(function() {
+                    scrollDown();
+                }, 500);
+            }
+        });
+
         window.addEventListener('load', function() {
             scrollDown();
         });
+
         function scrollDown() {
             const messagesChat = document.querySelector('.messages-chat');
             messagesChat.scrollTo({
@@ -164,8 +138,6 @@
                 behavior: 'smooth',
             });
         }
-
-        
     </script>
-  </body>
+</body>
 </html>
