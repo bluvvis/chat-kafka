@@ -25,12 +25,9 @@ async def websocket_handler(websocket, path):
         active_connections.remove(websocket)
 
 async def start_websocket_server():
-    try:
-        server = await websockets.serve(websocket_handler, "localhost", 8001)
-        print("WebSocket сервер запущен на ws://localhost:8001")
-        await server.wait_closed()
-    except Exception as e:
-        print(f"Ошибка запуска WebSocket-сервера: {e}")
+    server = await websockets.serve(websocket_handler, "localhost", 8001)
+    print("WebSocket сервер запущен на ws://localhost:8001")
+    await server.wait_closed()
 
 async def consume_messages():
     while True:
