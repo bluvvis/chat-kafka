@@ -2,9 +2,10 @@ import asyncio
 import json
 from kafka import KafkaConsumer
 import websockets
+from websockets.exceptions import ConnectionClosed
 
 consumer = KafkaConsumer(
-    'chat',  # Убедитесь, что тема совпадает
+    'chat',
     bootstrap_servers=['localhost:9092'],
     group_id='chat-group',
     value_deserializer=lambda m: json.loads(m.decode('utf-8'))
@@ -16,33 +17,46 @@ async def websocket_handler(websocket, path):
     active_connections.add(websocket)
     print(f"Новое WebSocket-подключение: {websocket.remote_address}")
     try:
-        while True:
-            message = await websocket.recv()
+        async for message in websocket:
             print(f"Получено от клиента: {message}")
-    except websockets.exceptions.ConnectionClosed:
+    except ConnectionClosed:
         print(f"Подключение закрыто: {websocket.remote_address}")
     finally:
         active_connections.remove(websocket)
 
 async def start_websocket_server():
-    server = await websockets.serve(websocket_handler, "localhost", 8001)
-    print("WebSocket сервер запущен на ws://localhost:8001")
-    await server.wait_closed()
+    try:
+        server = await websockets.serve(websocket_handler, "localhost", 8001)
+        print("WebSocket сервер запущен на ws://localhost:8001")
+        await server.wait_closed()
+    except Exception as e:
+        print(f"Ошибка запуска WebSocket-сервера: {e}")
 
 async def consume_messages():
+    # Запускаем WebSocket-сервер
     websocket_task = asyncio.create_task(start_websocket_server())
-    
-    for message in consumer:
-        data = message.value
-        if 'user' in data and 'message' in data:
-            print(f"Получено из Kafka: [{data['user']}]: {data['message']}")
-            for ws in list(active_connections):  # Копируем список для безопасности
-                try:
-                    await ws.send(f"[{data['user']}]: {data['message']}")
-                except websockets.exceptions.ConnectionClosed:
-                    active_connections.remove(ws)
-        else:
-            print("⚠️ Неверный формат сообщения:", data)
+
+    # Асинхронно читаем сообщения из Kafka
+    while True:
+        # Получаем сообщения из Kafka с таймаутом
+        for message in consumer.poll(timeout_ms=1000).values():
+            for msg in message:
+                data = msg.value
+                if 'user' in data and 'message' in data:
+                    print(f"Получено из Kafka: [{data['user']}]: {data['message']}")
+                    for ws in list(active_connections):
+                        try:
+                            await ws.send(json.dumps({"user": data['user'], "message": data['message']}))
+                        except ConnectionClosed:
+                            active_connections.remove(ws)
+                else:
+                    print("⚠️ Неверный формат сообщения:", data)
+        # Даём шанс другим задачам
+        await asyncio.sleep(0.1)
+
+async def main():
+    # Запускаем обе задачи
+    await asyncio.gather(consume_messages(), return_exceptions=True)
 
 if __name__ == "__main__":
-    asyncio.run(consume_messages())
+    asyncio.run(main())
