@@ -1,46 +1,40 @@
-from fastapi import FastAPI, Request
-from kafka import KafkaProducer, KafkaConsumer
-import json
-from fastapi.middleware.cors import CORSMiddleware
+import asyncio
+from fastapi import FastAPI
+from aiokafka import AIOKafkaConsumer
+from typing import List
 
+# Инициализация FastAPI приложения
 app = FastAPI()
 
-# Разрешаем фронту обращаться к серверу
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Конфигурация Kafka Consumer
+KAFKA_BROKER = "localhost:9092"  # Адрес вашего брокера Kafka
+KAFKA_TOPIC = "chat_topic"  # Тема, которая используется для обмена сообщениями
 
-producer = KafkaProducer(
-    bootstrap_servers='localhost:9092',
-    value_serializer=lambda v: json.dumps(v).encode('utf-8')
-)
+# Асинхронная функция для обработки сообщений из Kafka
+async def consume_messages():
+    consumer = AIOKafkaConsumer(
+        KAFKA_TOPIC,
+        bootstrap_servers=KAFKA_BROKER,
+        group_id="chat-consumer-group"
+    )
+    await consumer.start()
+    try:
+        async for msg in consumer:
+            print(f"Получено сообщение: {msg.value.decode()}")
+            # Здесь вы можете добавить обработку сообщения (например, сохранять в БД или отправлять на фронт)
+    finally:
+        await consumer.stop()
 
-consumer = KafkaConsumer(
-    'chat',
-    bootstrap_servers='localhost:9092',
-    auto_offset_reset='earliest',
-    group_id="web-client",
-    enable_auto_commit=True,
-    value_deserializer=lambda m: json.loads(m.decode('utf-8'))
-)
+# Запуск потребителя Kafka в фоне
+@app.on_event("startup")
+async def startup_event():
+    # Запускаем потребление сообщений Kafka в фоне
+    loop = asyncio.get_event_loop()
+    loop.create_task(consume_messages())
 
-@app.post("/send")
-async def send_message(request: Request):
-    data = await request.json()
-    username = data["username"]
-    message = data["message"]
-    producer.send('chat', {"username": username, "message": message})
-    return {"status": "sent"}
-
-@app.get("/messages")
-def get_messages():
-    messages = []
-    for msg in consumer:
-        messages.append(msg.value)
-        if len(messages) >= 10:
-            break
-    return messages
+# Пример маршрута для получения сообщений
+@app.get("/messages", response_model=List[str])
+async def get_messages():
+    # Это просто заглушка, вы можете сюда добавить логику для отображения сообщений
+    return ["Пример сообщения 1", "Пример сообщения 2"]
 
